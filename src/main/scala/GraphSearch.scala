@@ -12,9 +12,11 @@ object GraphSearch {
   def search[NodeType, EdgeType, CostType](startNode: NodeType,
                                            edgeFunction: NodeType => Map[EdgeType, NodeType],
                                            predicate: NodeType => Boolean,
-                                           cost: EdgeType => CostType,
+                                           costFunctionOpt: Option[EdgeType => CostType] = None,
                                            maximumCostOpt: Option[CostType] = None)
                                            (implicit num: Numeric[CostType]): Option[GraphSearchResult[NodeType, EdgeType, CostType]] = {
+    val costFunction = costFunctionOpt.getOrElse((x: EdgeType) => num.fromInt(1))
+
     val queue = mutable.PriorityQueue[(CostType, NodeType)]((num.fromInt(0), startNode))(
       Ordering.by((y: (CostType, NodeType)) => num.negate(y._1)))
 
@@ -43,7 +45,7 @@ object GraphSearch {
         }
 
         for ((edge, neighbor) <- edgeFunction(currentNode)) {
-          val alternativeCost = num.plus(currentNodeCost, cost(edge))
+          val alternativeCost = num.plus(currentNodeCost, costFunction(edge))
           val currentCostOpt = finalCosts.get(neighbor)
 
           // if there's no known path to `neighbor`, or the current cost is greater than `alternativeCost`
@@ -66,6 +68,6 @@ object GraphSearch {
   }
 
   def main(args: Array[String]) {
-    println(search[Int, Int, Int](1, (x: Int) => Map[Int, Int](1 -> (x + 1), 4 -> (x + 4)), _ == 11, (x) => 1))
+    println(search[Int, Int, Int](1, (x: Int) => Map[Int, Int](1 -> (x + 1), 4 -> (x + 4)), _ == 11))
   }
 }
