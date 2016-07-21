@@ -7,35 +7,53 @@ import scala.collection.mutable
 // start 8:51
 
 object EditDistance {
-  def distance[A](list1: List[A], list2: List[A]): Int = {
+  abstract class SubstitutionCost[A] {
+    def cost(x: A, y: A): Option[Int]
+  }
+
+  case class ConstantSubstitutionCost[A](constantCost: Int) extends SubstitutionCost[A] {
+    def cost(x: A, y: A) = Some(constantCost)
+  }
+
+  class UnitSubstitutionCost[A] extends SubstitutionCost[A] {
+    def cost(x: A, y: A) = Some(1)
+  }
+
+  def distance[TokenType](xs: List[TokenType],
+                          ys: List[TokenType],
+                          insertionCost: Option[Int] = Some(1),
+                          deletionCost: Option[Int] = Some(1),
+                          substitutionCost: SubstitutionCost[TokenType] = new UnitSubstitutionCost): Int = {
     val d = mutable.Map[(Int, Int), Int]((0, 0) -> 0)
 
-    1.to(list1.length).foreach((n) => {
+    1.to(xs.length).foreach((n) => {
       d((n, 0)) = n
     })
 
-    1.to(list2.length).foreach((n) => {
+    1.to(ys.length).foreach((n) => {
       d((0, n)) = n
     })
 
-    for (j <- 1.to(list2.length - 1)) {
-      for (i <- 1.to(list1.length - 1)) {
-        if (list1(i) == list2(j)) {
+    for (j <- 1.to(ys.length - 1)) {
+      for (i <- 1.to(xs.length - 1)) {
+        val x = xs(i)
+        val y = ys(j)
+        if (x == y) {
           d((i, j)) = d((i - 1, j - 1))
         } else {
           d((i, j)) = List(
-            d(i - 1, j) + 1,
-            d(i, j - 1) + 1,
-            d(i - 1, j - 1) + 1
-          ).min
+            insertionCost.map(_ + d(i - 1, j)),
+            deletionCost.map(_ + d(i, j - 1)),
+            substitutionCost.cost(x, y).map(_ + d(i - 1, j - 1))
+          ).flatten.min
         }
       }
     }
 
-    d((list1.length - 1, list2.length - 1))
+    d((xs.length - 1, ys.length - 1))
   }
 
   def main(args: Array[String]) {
-    println(distance(List(1,2,3,4,5), List(2,3,4,5)))
+    println(distance(List(2,6,4,5), List(2,3,4,5, 6, 7), Some(1), Some(1), new UnitSubstitutionCost[Int]))
   }
 }
